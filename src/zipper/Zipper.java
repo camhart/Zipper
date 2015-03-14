@@ -33,6 +33,8 @@ public class Zipper extends JFrame {
 	String startDir = "";
 
 	private Zipper self;
+
+	private JButton createJar;
 	
 	public Zipper() {
 		
@@ -45,6 +47,7 @@ public class Zipper extends JFrame {
 		this.setSize(500,  200);
 		
 		fileChooser = new JFileChooser("");
+		fileChooser.setFileHidingEnabled(false);
 		fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 		fileChooser.setMultiSelectionEnabled(true);
 		
@@ -81,11 +84,42 @@ public class Zipper extends JFrame {
 			}
 		});
 		
+		createJar = new JButton("Create jar");
+		
+		createJar.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				addFiles.setEnabled(false);
+				clearFiles.setEnabled(false);
+				createZip.setEnabled(false);
+				
+				String output = JOptionPane.showInputDialog(self, "What do you want to name your zip?");
+				
+				File file = new File(output);
+				if(!file.exists()) {
+					try {
+						file.createNewFile();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+				runJarWorker(file);				
+				addFiles.setEnabled(true);
+				clearFiles.setEnabled(true);
+				createZip.setEnabled(true);
+				JOptionPane.showMessageDialog(self, "Jar creation finished\n" + file.getAbsolutePath());
+			}
+			
+		});
+		
 		createZip = new JButton("Create zip");
 		
 		buttonBar.add(addFiles);
 		buttonBar.add(clearFiles);
 		buttonBar.add(createZip);
+		buttonBar.add(createJar);
 		
 		createZip.addActionListener(new ActionListener() {
 
@@ -106,34 +140,11 @@ public class Zipper extends JFrame {
 						e1.printStackTrace();
 					}
 				}
-				ZipWorker zipWorker = null;
-				try {
-					zipWorker = new ZipWorker(file);
-					for(int c = 0; c < tableModel.getRowCount(); c++) {
-						String filePath = (String) tableModel.getValueAt(c, 0);
-						String entryPath = (String) tableModel.getValueAt(c, 1);
-						zipWorker.addFile(new File(filePath), entryPath);
-					}
-					
-				} catch (FileNotFoundException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				} finally {
-					if(zipWorker != null)
-						try {
-							zipWorker.close();
-						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-				}				
+				runZipWorker(file);				
 				addFiles.setEnabled(true);
 				clearFiles.setEnabled(true);
 				createZip.setEnabled(true);
-				JOptionPane.showMessageDialog(self, "Done");
+				JOptionPane.showMessageDialog(self, "Zip creation finished\n" + file.getAbsolutePath());
 			}
 			
 		});
@@ -141,10 +152,67 @@ public class Zipper extends JFrame {
 		
 		this.add(buttonBar, BorderLayout.NORTH);
 		
-				
-		this.add(table,  BorderLayout.CENTER);
+		
+		JScrollPane scrollPane = new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+	            JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		
+		this.add(scrollPane,  BorderLayout.CENTER);
 //		this.add(fileList, BorderLayout.CENTER);
 		this.setVisible(true);		
+	}
+	
+	public void runZipWorker(File file) {
+		ZipWorker zipWorker = null;
+		try {
+			zipWorker = new ZipWorker(file);
+			for(int c = 0; c < tableModel.getRowCount(); c++) {
+				String filePath = (String) tableModel.getValueAt(c, 0);
+				String entryPath = (String) tableModel.getValueAt(c, 1);
+				zipWorker.addFile(new File(filePath), entryPath);
+			}
+			
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} finally {
+			if(zipWorker != null)
+				try {
+					zipWorker.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+		}
+	}
+	
+	public void runJarWorker(File file) {
+		JarWorker zipWorker = null;
+		try {
+			zipWorker = new JarWorker(file);
+			for(int c = 0; c < tableModel.getRowCount(); c++) {
+				String filePath = (String) tableModel.getValueAt(c, 0);
+				String entryPath = (String) tableModel.getValueAt(c, 1);
+				zipWorker.addFile(new File(filePath), entryPath);
+			}
+			
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} finally {
+			if(zipWorker != null)
+				try {
+					zipWorker.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+		}
 	}
 	
 	public void handleDirectory(File file) {
@@ -169,11 +237,15 @@ public class Zipper extends JFrame {
 		String entry = null;
 		String astring = file.getParentFile().getAbsolutePath().replace(startDir,  "");
 		astring = astring.substring(1,  astring.length());
-		entry = JOptionPane.showInputDialog(self, "Please set an entry for file:\n" + file.getAbsolutePath());
+		if(file.getName().contains("("))
+			entry = file.getName().replace("(1)", "");
+		else
+			entry = file.getName();
+//		entry = JOptionPane.showInputDialog(self, "Please set an entry for file:\n" + file.getAbsolutePath());
 		if(entry == null)
 			entry = "";
 		entry = astring + "\\" + entry;
-		String[] row = {file.getAbsolutePath(), entry};
+		String[] row = {file.getAbsolutePath(), entry.replace("\\",  "/")};
 		tableModel.addRow(row);		
 	}
 	
